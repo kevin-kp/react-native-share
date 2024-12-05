@@ -201,7 +201,7 @@ RCT_EXPORT_METHOD(open:(NSDictionary *)options
 
     NSArray *filenamesArray = options[@"filenames"];
     NSArray *urlsArray = options[@"urls"];
-    
+
     for (int i=0; i<urlsArray.count; i++) {
         NSURL *URL = [RCTConvert NSURL:urlsArray[i]];
         if (URL) {
@@ -214,7 +214,16 @@ RCT_EXPORT_METHOD(open:(NSDictionary *)options
                     reject(@"no data",@"no data",error);
                     return;
                 }
-                
+
+                // Check if the data is really an image
+                UIImage* image = [[UIImage alloc] initWithData:data];
+                if (image != nil) {
+                    auto url = [[NSFileManager defaultManager].temporaryDirectory URLByAppendingPathComponent:filename];
+                    [data writeToURL:url atomically:true];
+                    [items addObject:url];
+                    continue;
+                }
+
                 //name get from array of filenames
                 @try {
                     NSString *fileNameByIndex = [RCTConvert NSString:filenamesArray[i]];
@@ -301,7 +310,7 @@ RCT_EXPORT_METHOD(open:(NSDictionary *)options
 
     __weak UIActivityViewController* weakShareController = shareController;
     shareController.completionWithItemsHandler = ^(NSString *activityType, BOOL completed, __unused NSArray *returnedItems, NSError *activityError) {
-        
+
         // always dismiss since this may be called from cancelled shares
         // but the share menu would remain open, and our callback would fire again on close
         if(weakShareController){
@@ -311,7 +320,7 @@ RCT_EXPORT_METHOD(open:(NSDictionary *)options
             [controller dismissViewControllerAnimated:true completion:nil];
         }
 
-        
+
         if (activityError) {
             reject(@"error",@"activityError",activityError);
         } else {
@@ -320,7 +329,7 @@ RCT_EXPORT_METHOD(open:(NSDictionary *)options
                 @"message": (RCTNullIfNil(activityType) ?: @"")
             });
         }
-        
+
         // clear the completion handler to prevent cycles
         if(weakShareController){
             weakShareController.completionWithItemsHandler = nil;
